@@ -1,0 +1,21 @@
+# Archivos de compilacion de Maven (crucial para que no se suba basura)
+/target/
+*.class
+
+# Archivos privados de NetBeans / IDEs
+/nbproject/private/
+/nbproject/Makefile-*.mk
+/nbproject/Package-*.bash
+build/
+dist/
+
+# Archivos de configuracion de Eclipse o VS Code
+.settings/
+.classpath
+.project
+.vscode/
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+ehthumbs.db
