@@ -10,8 +10,10 @@ import campuseats.modelo.Pago;
 import campuseats.modelo.Plato;
 import campuseats.repositorio.RepositorioDatos;
 
+import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -39,13 +41,13 @@ public class ServicioAnalitica {
             List<Pago> pagosBrutos = fabrica.leerTodas(configs, base, Pago.class);
             List<Plato> menuBruto = fabrica.leerTodas(configs, base, Plato.class);
 
-            // 2. LIMPIEZA (Comentamos temporalmente ConciliarConPagos para que no borre todo)
+            // 2. LIMPIEZA
             System.out.println("2. Ejecutando el Pipeline de limpieza de datos...");
             List<Filtro> filtros = Arrays.asList(
                 new EliminarDuplicados(),
                 new ValidarCantidades(),
                 new SoloPagados(),
-                // new ConciliarConPagos(pagosBrutos), -> Comentado temporalmente por incompatibilidad de datos
+                new ConciliarConPagos(pagosBrutos),
                 new UnirConMenu(menuBruto)
             );
 
@@ -67,7 +69,9 @@ public class ServicioAnalitica {
             repositorio.guardarPagos(pagosBrutos);
             repositorio.guardarMenu(menuBruto);
 
-            System.out.println("   > Pedidos guardados en repositorio: " + repositorio.obtenerPedidos().size());
+            System.out.println("   > Lineas guardadas en repositorio: " + repositorio.obtenerPedidos().size());
+            System.out.println("   > Pedidos distintos: " + repositorio.obtenerPedidos().stream()
+                    .map(LineaPedido::numeroPedido).distinct().count());
 
             // 4. METRICAS
             System.out.println("4. Calculando metricas estadisticas...");
@@ -86,26 +90,40 @@ public class ServicioAnalitica {
             for (Metrica metrica : metricas) {
                 System.out.println("\n[Metrica] " + metrica.nombre() + ":");
                 Object resultado = metrica.calcular(datosAnalitica);
-                
-                if (resultado instanceof Map) {
-                    ((Map<?, ?>) resultado).forEach((k, v) -> System.out.println("   " + k + " -> " + v));
-                } else if (resultado instanceof List) {
-                    List<?> lista = (List<?>) resultado;
-                    if (lista.isEmpty()) {
-                        System.out.println("   (Sin resultados para mostrar)");
-                    } else {
-                        lista.forEach(item -> System.out.println("   " + item));
-                    }
-                } else {
-                    System.out.println("   " + resultado);
-                }
+                imprimirResultado(metrica, resultado);
             }
 
             System.out.println("\n--- PROCESO FINALIZADO CON EXITO ---");
 
         } catch (Exception e) {
-            System.err.println("Error durante la ejecución del servicio: " + e.getMessage());
+            System.err.println("Error durante la ejecucion del servicio: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    private void imprimirResultado(Metrica metrica, Object resultado) {
+        if (metrica instanceof PlatosTop && resultado instanceof List<?> lista) {
+            int pos = 1;
+            for (Object o : lista) {
+                Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
+                System.out.println("   " + pos++ + ". " + e.getKey() + ", " + e.getValue() + " unidades");
+            }
+        } else if (metrica instanceof PedidosPorHora && resultado instanceof Map<?, ?> mapa) {
+            List<Object> horas = new ArrayList<>(mapa.keySet());
+            List<Object> cantidades = new ArrayList<>(mapa.values());
+            if (horas.isEmpty()) {
+                System.out.println("   (Sin resultados para mostrar)");
+                return;
+            }
+            System.out.println("   La hora pico es las " + horas.get(0) + ", con " + cantidades.get(0) + " pedidos.");
+            if (horas.size() >= 3) {
+                System.out.println("   Le siguen las " + horas.get(1) + " (" + cantidades.get(1)
+                        + ") y las " + horas.get(2) + " (" + cantidades.get(2) + ").");
+            }
+        } else if (resultado instanceof BigDecimal valor) {
+            System.out.println("   " + valor.toPlainString().replace('.', ',') + " dolares por pedido");
+        } else {
+            System.out.println("   " + resultado);
         }
     }
 }
