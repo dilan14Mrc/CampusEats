@@ -18,7 +18,7 @@ public class ConciliarConPagos implements Filtro {
             // Buscamos un pago aprobado 
             return pagos.stream().anyMatch(pago -> 
                 pago.referencia().equals(linea.numeroPedido()) &&
-                pago.estado().equals("APROBADO") && 
+                pago.estado().equals("APROBADA") && 
                 pago.monto().compareTo(linea.totalPedido()) == 0 // compareTo porque BigDecimal usa escala
             );
         }).collect(Collectors.toList());
