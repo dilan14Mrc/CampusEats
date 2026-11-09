@@ -17,17 +17,14 @@ public class PedidosPorHora implements Metrica {
 
         Map<String, Long> conteo = datos.unaLineaPorPedido()
             .stream()
-            .filter(linea -> linea.registradoEn() != null)
+            .filter(linea -> linea.pagadoEn() != null)
             .collect(Collectors.groupingBy(
-                linea -> linea.registradoEn().format(
-                    DateTimeFormatter.ofPattern("HH:00")
-                ),
+                linea -> linea.pagadoEn().format(DateTimeFormatter.ofPattern("HH:00")),
                 Collectors.counting()
             ));
 
         return conteo.entrySet().stream()
-            .sorted(Map.Entry.<String, Long>comparingByValue()
-                .reversed())
+            .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
             .collect(Collectors.toMap(
                 Map.Entry::getKey,
                 Map.Entry::getValue,
